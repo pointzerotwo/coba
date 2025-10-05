@@ -1,0 +1,16 @@
+// Print statement demonstration
+
+text(50) message = "Welcome to Coba!"
+dec(9,2) price = 99.99
+int quantity = 5
+
+function displayInfo() {
+    print message
+    print "Price: ", price
+    print "Quantity: ", quantity
+    print "Total: ", price * quantity
+}
+
+function greet(text(30) name) {
+    print "Hello, ", name, "!"
+}

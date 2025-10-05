@@ -1,0 +1,13 @@
+[package]
+name = "coba-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+coba-lexer = { path = "../coba-lexer" }
+coba-parser = { path = "../coba-parser" }
+coba-ast = { path = "../coba-ast" }
+coba-semantic = { path = "../coba-semantic" }
+coba-codegen = { path = "../coba-codegen" }

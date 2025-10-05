@@ -1,0 +1,5 @@
+text(50) welcome = "Hello World!"
+
+function doTheThing() {
+    print welcome
+}

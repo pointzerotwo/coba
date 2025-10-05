@@ -1,0 +1,140 @@
+// Advanced Coba Features Demo
+// Showcases: arrays, exponentiation, evaluate, and accept
+
+// Array declarations
+int[5] scores
+dec(9,2)[10] prices
+text(20)[3] names
+
+// Regular variables
+int currentGrade
+text(10) username
+dec(9,2) powerResult
+
+function initializeData() {
+    // Initialize array elements
+    set scores[0] = 85
+    set scores[1] = 92
+    set scores[2] = 78
+    set scores[3] = 95
+    set scores[4] = 88
+
+    set prices[0] = 19.99
+    set prices[1] = 24.50
+    set prices[2] = 15.75
+
+    set names[0] = "Alice"
+    set names[1] = "Bob"
+    set names[2] = "Charlie"
+}
+
+function demonstrateExponentiation() {
+    dec(9,2) base
+    int exponent
+
+    set base = 2.0
+    set exponent = 3
+
+    // Calculate 2^3 using exponentiation operator
+    set powerResult = base ** exponent
+
+    print "2 ** 3 = ", powerResult
+
+    // More complex example: 3^4 - 2^5
+    print "3 ** 4 - 2 ** 5 = ", 3.0 ** 4.0 - 2.0 ** 5.0
+}
+
+function gradeEvaluator(int score) {
+    // EVALUATE statement for multi-way branching
+    evaluate score {
+        when 90..100:
+            print "Grade: A - Excellent!"
+            set currentGrade = 4
+        when 80..89:
+            print "Grade: B - Good work!"
+            set currentGrade = 3
+        when 70..79:
+            print "Grade: C - Satisfactory"
+            set currentGrade = 2
+        when 60..69:
+            print "Grade: D - Needs improvement"
+            set currentGrade = 1
+        when other:
+            print "Grade: F - Failed"
+            set currentGrade = 0
+    }
+}
+
+function processScores() {
+    int i
+
+    print "Student Scores:"
+
+    set i = 0
+    while i < 5 {
+        print names[0], "'s score ", i, ": ", scores[i]
+        call gradeEvaluator(scores[i])
+        set i = i + 1
+    }
+}
+
+function getUserInput() {
+    text(50) userDate
+    text(20) userTime
+
+    print "Enter your username:"
+    accept username
+
+    print "Getting system date and time..."
+    accept userDate from date
+    accept userTime from time
+
+    print "Welcome, ", username, "!"
+    print "Current date: ", userDate
+    print "Current time: ", userTime
+}
+
+function arrayOperations() {
+    int sum
+    dec(9,2) average
+    int count
+
+    set sum = 0
+    set count = 0
+
+    // Calculate sum of scores
+    while count < 5 {
+        set sum = sum + scores[count]
+        set count = count + 1
+    }
+
+    // Calculate average
+    set average = sum / 5.0
+
+    print "Total score: ", sum
+    print "Average score: ", average
+}
+
+function priceCalculator() {
+    int item
+
+    print "Price List:"
+
+    set item = 0
+    while item < 3 {
+        evaluate item {
+            when 0:
+                print "Item A: $", prices[item]
+            when 1:
+                print "Item B: $", prices[item], " (10% discount applies)"
+                set prices[item] = prices[item] * 0.9
+                print "Discounted: $", prices[item]
+            when 2:
+                print "Item C: $", prices[item]
+            when other:
+                print "Unknown item"
+        }
+
+        set item = item + 1
+    }
+}

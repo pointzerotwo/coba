@@ -1,0 +1,11 @@
+[package]
+name = "coba-codegen"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+coba-ast = { path = "../coba-ast" }
+coba-semantic = { path = "../coba-semantic" }
+lazy_static = "1.4"

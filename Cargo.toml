@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/coba-lexer",
+    "crates/coba-parser",
+    "crates/coba-ast",
+    "crates/coba-semantic",
+    "crates/coba-codegen",
+    "crates/coba-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Coba Contributors"]
+license = "MIT"
+repository = "https://github.com/yourusername/coba"
+
+[workspace.dependencies]
+# Shared dependencies across all crates

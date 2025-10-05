@@ -1,0 +1,27 @@
+// Type system examples
+// Demonstrates different data types in Coba
+
+dec(9,2) price = 99.99
+dec(5,0) quantity = 10
+dec(3,3) percentage = 0.125
+
+text(100) description = "Product Description"
+text(10) code = "ABC123"
+text(1) flag = "Y"
+
+int itemCount = 42
+bool isActive = true
+bool isProcessed = false
+
+function processItem(dec(9,2) itemPrice, int itemQty) {
+    dec(9,2) subtotal
+
+    set subtotal = itemPrice * itemQty
+    set price = subtotal
+
+    if subtotal > 100.00 {
+        set isActive = true
+    } else {
+        set isActive = false
+    }
+}

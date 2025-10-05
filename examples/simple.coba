@@ -1,0 +1,28 @@
+// Simple Coba program
+// Demonstrates basic variable declarations and functions
+
+dec(9,2) globalTotal = 0.00
+text(50) customerName = "John Doe"
+int counter = 0
+
+function initialize() {
+    set counter = 0
+    set globalTotal = 0.00
+    print "Initialized!"
+}
+
+function calculateDiscount(dec(9,2) price, dec(5,2) rate) {
+    dec(9,2) discount
+    set discount = price * rate
+    set globalTotal = price - discount
+}
+
+function incrementCounter() {
+    set counter = counter + 1
+}
+
+function showStatus() {
+    print "Customer: ", customerName
+    print "Total: ", globalTotal
+    print "Counter: ", counter
+}
