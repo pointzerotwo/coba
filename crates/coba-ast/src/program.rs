@@ -35,6 +35,20 @@ pub enum Declaration {
         parameters: Vec<Parameter>,
         body: Vec<Stmt>,
     },
+
+    /// File declaration
+    File {
+        name: String,
+        organization: FileOrganization,
+        record_type: Type,
+        status_var: Option<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FileOrganization {
+    Sequential,
+    // Future: Indexed, Relative
 }
 
 #[derive(Debug, Clone, PartialEq)]

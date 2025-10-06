@@ -44,6 +44,18 @@ impl SemanticAnalyzer {
                         self.errors.push(e);
                     }
                 }
+                Declaration::File { name, record_type, status_var, .. } => {
+                    // Register file as a global
+                    if let Err(e) = self.symbol_table.add_global(name.clone(), record_type.clone()) {
+                        self.errors.push(e);
+                    }
+                    // Register status variable if present
+                    if let Some(status) = status_var {
+                        if let Err(e) = self.symbol_table.add_global(status.clone(), coba_ast::types::Type::text(2)) {
+                            self.errors.push(e);
+                        }
+                    }
+                }
             }
         }
 
@@ -328,6 +340,248 @@ impl SemanticAnalyzer {
                 // Check that variable exists
                 if self.symbol_table.lookup(variable).is_none() {
                     self.errors.push(format!("Undefined variable in accept: {}", variable));
+                }
+            }
+
+            StmtKind::Initialize { variables } => {
+                // Check that all variables exist
+                for var in variables {
+                    if self.symbol_table.lookup(var).is_none() {
+                        self.errors.push(format!("Undefined variable in initialize: {}", var));
+                    }
+                }
+            }
+
+            StmtKind::Continue => {
+                // No-op, no validation needed
+            }
+
+            StmtKind::Exit => {
+                // No-op, no validation needed
+            }
+
+            StmtKind::StringConcat { sources, destination, pointer } => {
+                let checker = TypeChecker::new(&self.symbol_table);
+
+                // Check all source expressions
+                for src in sources {
+                    if let Err(e) = checker.check_expr(&src.value) {
+                        self.errors.push(format!("Type error in string source: {}", e));
+                    }
+                    if let Some(delim) = &src.delimiter {
+                        if let Err(e) = checker.check_expr(delim) {
+                            self.errors.push(format!("Type error in string delimiter: {}", e));
+                        }
+                    }
+                }
+
+                // Check destination variable exists
+                if self.symbol_table.lookup(destination).is_none() {
+                    self.errors.push(format!("Undefined destination variable: {}", destination));
+                }
+
+                // Check pointer variable if present
+                if let Some(ptr) = pointer {
+                    if self.symbol_table.lookup(ptr).is_none() {
+                        self.errors.push(format!("Undefined pointer variable: {}", ptr));
+                    }
+                }
+            }
+
+            StmtKind::StringSplit { source, delimiter, destinations, pointer, tallying } => {
+                // Check source variable exists
+                if self.symbol_table.lookup(source).is_none() {
+                    self.errors.push(format!("Undefined source variable: {}", source));
+                }
+
+                // Check delimiter expression if present
+                if let Some(delim) = delimiter {
+                    let checker = TypeChecker::new(&self.symbol_table);
+                    if let Err(e) = checker.check_expr(delim) {
+                        self.errors.push(format!("Type error in unstring delimiter: {}", e));
+                    }
+                }
+
+                // Check all destination variables exist
+                for dest in destinations {
+                    if self.symbol_table.lookup(dest).is_none() {
+                        self.errors.push(format!("Undefined destination variable: {}", dest));
+                    }
+                }
+
+                // Check pointer variable if present
+                if let Some(ptr) = pointer {
+                    if self.symbol_table.lookup(ptr).is_none() {
+                        self.errors.push(format!("Undefined pointer variable: {}", ptr));
+                    }
+                }
+
+                // Check tallying variable if present
+                if let Some(tally) = tallying {
+                    if self.symbol_table.lookup(tally).is_none() {
+                        self.errors.push(format!("Undefined tallying variable: {}", tally));
+                    }
+                }
+            }
+
+            StmtKind::StringInspect { target, operation } => {
+                use coba_ast::stmt::InspectOperation;
+
+                // Check target variable exists
+                if self.symbol_table.lookup(target).is_none() {
+                    self.errors.push(format!("Undefined target variable: {}", target));
+                }
+
+                // Check operation expressions
+                let checker = TypeChecker::new(&self.symbol_table);
+                match operation {
+                    InspectOperation::Replacing { pattern, replacement } |
+                    InspectOperation::ReplacingAll { pattern, replacement } => {
+                        if let Err(e) = checker.check_expr(pattern) {
+                            self.errors.push(format!("Type error in inspect pattern: {}", e));
+                        }
+                        if let Err(e) = checker.check_expr(replacement) {
+                            self.errors.push(format!("Type error in inspect replacement: {}", e));
+                        }
+                    }
+                    InspectOperation::Tallying { counter, pattern } |
+                    InspectOperation::TallyingAll { counter, pattern } => {
+                        if self.symbol_table.lookup(counter).is_none() {
+                            self.errors.push(format!("Undefined counter variable: {}", counter));
+                        }
+                        if let Err(e) = checker.check_expr(pattern) {
+                            self.errors.push(format!("Type error in inspect pattern: {}", e));
+                        }
+                    }
+                }
+            }
+
+            StmtKind::SearchLinear { array, index, at_end, when_clauses } => {
+                // Check array variable exists
+                if self.symbol_table.lookup(array).is_none() {
+                    self.errors.push(format!("Undefined array variable: {}", array));
+                }
+
+                // Check index variable if present
+                if let Some(idx) = index {
+                    if self.symbol_table.lookup(idx).is_none() {
+                        self.errors.push(format!("Undefined index variable: {}", idx));
+                    }
+                }
+
+                // Check at_end clause
+                if let Some(stmts) = at_end {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+
+                // Check when clauses
+                for (condition, body) in when_clauses {
+                    {
+                        let checker = TypeChecker::new(&self.symbol_table);
+                        if let Err(e) = checker.check_expr(condition) {
+                            self.errors.push(format!("Type error in search condition: {}", e));
+                        }
+                    }
+                    for stmt in body {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
+
+            StmtKind::SearchBinary { array, index, at_end, when_condition, when_body } => {
+                // Check array variable exists
+                if self.symbol_table.lookup(array).is_none() {
+                    self.errors.push(format!("Undefined array variable: {}", array));
+                }
+
+                // Check index variable if present
+                if let Some(idx) = index {
+                    if self.symbol_table.lookup(idx).is_none() {
+                        self.errors.push(format!("Undefined index variable: {}", idx));
+                    }
+                }
+
+                // Check at_end clause
+                if let Some(stmts) = at_end {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+
+                // Check when condition and body
+                {
+                    let checker = TypeChecker::new(&self.symbol_table);
+                    if let Err(e) = checker.check_expr(when_condition) {
+                        self.errors.push(format!("Type error in search all condition: {}", e));
+                    }
+                }
+                for stmt in when_body {
+                    self.analyze_statement(stmt);
+                }
+            }
+
+            StmtKind::SetIndex { index, operation } => {
+                use coba_ast::stmt::SetOperation;
+
+                // Check index variable exists
+                if self.symbol_table.lookup(index).is_none() {
+                    self.errors.push(format!("Undefined index variable: {}", index));
+                }
+
+                // Check operation expression
+                let checker = TypeChecker::new(&self.symbol_table);
+                let expr = match operation {
+                    SetOperation::To(e) | SetOperation::UpBy(e) | SetOperation::DownBy(e) => e,
+                };
+                if let Err(e) = checker.check_expr(expr) {
+                    self.errors.push(format!("Type error in set index operation: {}", e));
+                }
+            }
+
+            StmtKind::OpenFile { file, .. } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+            }
+
+            StmtKind::CloseFile { file } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+            }
+
+            StmtKind::ReadFile { file, record, at_end } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+
+                // Check record variable exists
+                if self.symbol_table.lookup(record).is_none() {
+                    self.errors.push(format!("Undefined record variable: {}", record));
+                }
+
+                // Check at_end clause
+                if let Some(stmts) = at_end {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
+
+            StmtKind::WriteFile { file, record } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+
+                // Check record variable exists
+                if self.symbol_table.lookup(record).is_none() {
+                    self.errors.push(format!("Undefined record variable: {}", record));
                 }
             }
         }

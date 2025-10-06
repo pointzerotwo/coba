@@ -55,21 +55,77 @@ Coba is a modern programming language designed to provide a contemporary syntax 
 
 Reserved keywords in Coba:
 
+**Type Keywords:**
 - `dec`
 - `text`
 - `int`
 - `bool`
+
+**Control Flow:**
 - `function`
 - `if`
 - `elif`
 - `else`
 - `while`
 - `for`
+- `to`
+- `step`
 - `return`
+- `evaluate`
+- `when`
+- `other`
+- `continue`
+- `exit`
+
+**Statements:**
 - `set`
 - `call`
+- `print`
+- `accept`
+- `initialize`
+
+**File I/O:**
+- `file`
+- `open`
+- `close`
+- `read`
+- `write`
+- `input`
+- `output`
+- `extend`
+- `record`
+- `sequential`
+- `organization`
+- `access`
+- `status`
+
+**String Operations:**
+- `string`
+- `unstring`
+- `inspect`
+- `delimited`
+- `by`
+- `into`
+- `replacing`
+- `all`
+- `tallying`
+- `with`
+- `pointer`
+
+**Search Operations:**
+- `search`
+- `searchall`
+- `varying`
+- `at`
+- `end`
+- `indexed`
+
+**Literals:**
 - `true`
 - `false`
+
+**Sources:**
+- `from`
 
 ### Identifiers
 
@@ -354,6 +410,557 @@ ACCEPT GLOBAL-USERNAME.
 ACCEPT GLOBAL-CURRENTDATE FROM DATE YYYYMMDD.
 ACCEPT GLOBAL-CURRENTTIME FROM TIME.
 ```
+
+### Initialize Statement
+
+Reset variables to their default values. Maps to COBOL's `INITIALIZE` statement.
+
+```coba
+initialize variable1, variable2, variable3
+```
+
+Examples:
+```coba
+text(50) name
+int counter
+dec(9,2) total
+
+initialize name, counter, total
+// name = spaces, counter = 0, total = 0.00
+```
+
+**COBOL Mapping:**
+```cobol
+INITIALIZE GLOBAL-NAME.
+INITIALIZE GLOBAL-COUNTER.
+INITIALIZE GLOBAL-TOTAL.
+```
+
+### Continue Statement
+
+No-operation placeholder. Maps to COBOL's `CONTINUE` statement.
+
+```coba
+continue
+```
+
+Example:
+```coba
+if someCondition {
+    continue  // Placeholder for future logic
+}
+```
+
+**COBOL Mapping:**
+```cobol
+CONTINUE.
+```
+
+### Exit Statement
+
+Exit from the current function or paragraph. Maps to COBOL's `EXIT` statement.
+
+```coba
+exit
+```
+
+Example:
+```coba
+function processData() {
+    if errorCondition {
+        exit
+    }
+    // Continue processing
+}
+```
+
+**COBOL Mapping:**
+```cobol
+EXIT.
+```
+
+### String Operations
+
+#### String Concatenation
+
+Concatenate multiple strings with delimiters. Maps to COBOL's `STRING` statement.
+
+```coba
+string source1 delimited by delimiter1, source2 delimited by size into destination
+string source1, source2 into destination with pointer ptr
+```
+
+Examples:
+```coba
+text(30) firstName = "John"
+text(30) lastName = "Doe"
+text(60) fullName
+int ptr
+
+// Concatenate with delimiter
+string firstName delimited by " ", " " delimited by size, lastName delimited by " " into fullName
+
+// Concatenate with pointer
+string firstName, " ", lastName into fullName with pointer ptr
+```
+
+**COBOL Mapping:**
+```cobol
+STRING GLOBAL-FIRSTNAME DELIMITED BY SPACE
+       " " DELIMITED BY SIZE
+       GLOBAL-LASTNAME DELIMITED BY SPACE
+       INTO GLOBAL-FULLNAME.
+
+STRING GLOBAL-FIRSTNAME DELIMITED BY SIZE
+       " " DELIMITED BY SIZE
+       GLOBAL-LASTNAME DELIMITED BY SIZE
+       INTO GLOBAL-FULLNAME
+       WITH POINTER GLOBAL-PTR.
+```
+
+**Notes:**
+- `delimited by size` means use the entire string
+- `delimited by expression` stops at the delimiter
+- `with pointer` tracks the position in the destination
+
+#### String Splitting
+
+Split a string by delimiter into multiple parts. Maps to COBOL's `UNSTRING` statement.
+
+```coba
+unstring source delimited by delimiter into dest1, dest2, dest3
+unstring source delimited by delimiter into dest1, dest2 with pointer ptr tallying counter
+```
+
+Examples:
+```coba
+text(60) fullName = "John Doe"
+text(30) firstName
+text(30) lastName
+int ptr
+int count
+
+// Simple split
+unstring fullName delimited by " " into firstName, lastName
+
+// Split with pointer and tallying
+unstring fullName delimited by " " into firstName, lastName with pointer ptr tallying count
+```
+
+**COBOL Mapping:**
+```cobol
+UNSTRING GLOBAL-FULLNAME
+    DELIMITED BY " "
+    INTO GLOBAL-FIRSTNAME, GLOBAL-LASTNAME.
+
+UNSTRING GLOBAL-FULLNAME
+    DELIMITED BY " "
+    INTO GLOBAL-FIRSTNAME, GLOBAL-LASTNAME
+    WITH POINTER GLOBAL-PTR
+    TALLYING IN GLOBAL-COUNT.
+```
+
+#### String Inspection
+
+Search and replace or count characters in a string. Maps to COBOL's `INSPECT` statement.
+
+```coba
+inspect target replacing pattern by replacement
+inspect target replacing all pattern by replacement
+inspect target tallying counter for pattern
+inspect target tallying counter for all pattern
+```
+
+Examples:
+```coba
+text(50) message = "Hello World"
+int counter
+
+// Replace first occurrence
+inspect message replacing "o" by "0"
+// message = "Hell0 World"
+
+// Replace all occurrences
+inspect message replacing all "o" by "0"
+// message = "Hell0 W0rld"
+
+// Count occurrences
+inspect message tallying counter for all "o"
+// counter = 2
+```
+
+**COBOL Mapping:**
+```cobol
+INSPECT GLOBAL-MESSAGE REPLACING FIRST "o" BY "0".
+INSPECT GLOBAL-MESSAGE REPLACING ALL "o" BY "0".
+INSPECT GLOBAL-MESSAGE TALLYING GLOBAL-COUNTER FOR ALL "o".
+```
+
+### Search Operations
+
+#### Linear Search
+
+Search an array sequentially for elements matching conditions. Maps to COBOL's `SEARCH` statement.
+
+```coba
+search array varying index
+    at end:
+        // Not found statements
+    when condition1:
+        // Found statements
+    when condition2:
+        // Found statements
+end
+```
+
+Examples:
+```coba
+int[10] numbers
+int idx
+bool found = false
+
+// Search for value
+search numbers varying idx
+    at end:
+        print "Not found"
+    when numbers[idx] == 42:
+        print "Found at index: ", idx
+        set found = true
+end
+
+// Multiple conditions
+search numbers varying idx
+    when numbers[idx] > 50:
+        print "Found large value: ", numbers[idx]
+    when numbers[idx] < 10:
+        print "Found small value: ", numbers[idx]
+end
+```
+
+**COBOL Mapping:**
+```cobol
+SEARCH GLOBAL-NUMBERS VARYING GLOBAL-IDX
+    AT END
+        DISPLAY "Not found"
+    WHEN GLOBAL-NUMBERS(GLOBAL-IDX) = 42
+        DISPLAY "Found at index: " GLOBAL-IDX
+        MOVE 1 TO GLOBAL-FOUND
+END-SEARCH.
+```
+
+**Notes:**
+- `varying index` is optional
+- `at end` clause executes if no match found
+- Multiple `when` clauses supported
+- Index is 0-based in Coba, 1-based in COBOL
+
+#### Binary Search
+
+Search a sorted array using binary search. Maps to COBOL's `SEARCH ALL` statement.
+
+```coba
+searchall array varying index
+    at end:
+        // Not found statements
+    when condition:
+        // Found statements
+end
+```
+
+Examples:
+```coba
+int[100] sortedNumbers
+int idx
+
+// Binary search requires array to be sorted
+searchall sortedNumbers varying idx
+    at end:
+        print "Not found"
+    when sortedNumbers[idx] == 42:
+        print "Found at index: ", idx
+end
+```
+
+**COBOL Mapping:**
+```cobol
+SEARCH ALL GLOBAL-SORTEDNUMBERS VARYING GLOBAL-IDX
+    AT END
+        DISPLAY "Not found"
+    WHEN GLOBAL-SORTEDNUMBERS(GLOBAL-IDX) = 42
+        DISPLAY "Found at index: " GLOBAL-IDX
+END-SEARCH.
+```
+
+**Notes:**
+- Array must be sorted
+- Only one `when` condition allowed
+- Much faster than linear search for large arrays
+
+### Set Index Operations
+
+Manipulate array index variables. Maps to COBOL's `SET` statement.
+
+```coba
+set index to value
+set index up by increment
+set index down by decrement
+```
+
+Examples:
+```coba
+int[10] numbers
+int idx
+
+// Set index to specific value
+set idx to 1
+
+// Increment index
+set idx up by 1
+
+// Decrement index
+set idx down by 2
+```
+
+**COBOL Mapping:**
+```cobol
+SET GLOBAL-IDX TO 1.
+SET GLOBAL-IDX UP BY 1.
+SET GLOBAL-IDX DOWN BY 2.
+```
+
+---
+
+## 9. File I/O Operations
+
+### File Declaration
+
+Declare files for sequential access. Maps to COBOL's FILE-CONTROL and FD sections.
+
+```coba
+file filename sequential record recordType
+file filename sequential record recordType status statusVariable
+```
+
+Examples:
+```coba
+// File with text records
+file customerFile sequential record text(100)
+
+// File with structured records
+file transactionFile sequential record text(80) status fileStatus
+
+// Status variable tracks file operations (00 = success, 10 = end of file, etc.)
+text(2) fileStatus
+```
+
+**COBOL Mapping:**
+```cobol
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+FILE-CONTROL.
+    SELECT CUSTOMERFILE ASSIGN TO "customerFile"
+        ORGANIZATION IS SEQUENTIAL.
+
+    SELECT TRANSACTIONFILE ASSIGN TO "transactionFile"
+        ORGANIZATION IS SEQUENTIAL
+        FILE STATUS IS FILESTATUS.
+
+DATA DIVISION.
+FILE SECTION.
+FD CUSTOMERFILE.
+01 CUSTOMERFILE-RECORD PIC X(100).
+
+FD TRANSACTIONFILE.
+01 TRANSACTIONFILE-RECORD PIC X(80).
+
+WORKING-STORAGE SECTION.
+01 FILESTATUS PIC XX.
+```
+
+### Open File
+
+Open a file for reading, writing, or appending. Maps to COBOL's `OPEN` statement.
+
+```coba
+open file input      // Open for reading
+open file output     // Open for writing (creates/overwrites)
+open file extend     // Open for appending
+```
+
+Examples:
+```coba
+file dataFile sequential record text(80)
+text(80) record
+
+// Open for reading
+open dataFile input
+
+// Process file...
+
+close dataFile
+```
+
+**COBOL Mapping:**
+```cobol
+OPEN INPUT DATAFILE.
+OPEN OUTPUT DATAFILE.
+OPEN EXTEND DATAFILE.
+```
+
+### Close File
+
+Close an open file. Maps to COBOL's `CLOSE` statement.
+
+```coba
+close filename
+```
+
+Example:
+```coba
+open dataFile input
+// ... read data ...
+close dataFile
+```
+
+**COBOL Mapping:**
+```cobol
+CLOSE DATAFILE.
+```
+
+### Read File
+
+Read a record from a file. Maps to COBOL's `READ` statement.
+
+```coba
+read file into record
+read file into record at end:
+    // End of file handling
+end
+```
+
+Examples:
+```coba
+file inputFile sequential record text(80) status fileStatus
+text(80) line
+text(2) fileStatus
+bool endOfFile = false
+
+open inputFile input
+
+// Simple read
+read inputFile into line
+
+// Read with end-of-file handling
+read inputFile into line at end:
+    set endOfFile = true
+    print "End of file reached"
+end
+
+close inputFile
+```
+
+**COBOL Mapping:**
+```cobol
+READ INPUTFILE INTO LINE.
+
+READ INPUTFILE INTO LINE
+    AT END
+        MOVE 1 TO ENDOFFILE
+        DISPLAY "End of file reached"
+END-READ.
+```
+
+### Write File
+
+Write a record to a file. Maps to COBOL's `WRITE` statement.
+
+```coba
+write record to file
+```
+
+Examples:
+```coba
+file outputFile sequential record text(80)
+text(80) record
+
+set record = "Hello, World!"
+
+open outputFile output
+write record to outputFile
+close outputFile
+```
+
+**COBOL Mapping:**
+```cobol
+WRITE OUTPUTFILE-RECORD FROM RECORD.
+```
+
+### Complete File Processing Example
+
+```coba
+// File declarations
+file inputFile sequential record text(80) status inStatus
+file outputFile sequential record text(80) status outStatus
+
+// Variables
+text(80) inputRecord
+text(80) outputRecord
+text(2) inStatus
+text(2) outStatus
+bool endOfFile = false
+
+function processFiles() {
+    // Open files
+    open inputFile input
+    open outputFile output
+
+    // Read and process until end of file
+    while !endOfFile {
+        read inputFile into inputRecord at end:
+            set endOfFile = true
+        end
+
+        if !endOfFile {
+            // Process record
+            set outputRecord = inputRecord
+            write outputRecord to outputFile
+        }
+    }
+
+    // Close files
+    close inputFile
+    close outputFile
+}
+```
+
+**COBOL Mapping:**
+```cobol
+PROCESSFILES.
+    OPEN INPUT INPUTFILE.
+    OPEN OUTPUT OUTPUTFILE.
+
+    PERFORM UNTIL ENDOFFILE = 1
+        READ INPUTFILE INTO INPUTRECORD
+            AT END
+                MOVE 1 TO ENDOFFILE
+        END-READ
+
+        IF ENDOFFILE NOT = 1
+            MOVE INPUTRECORD TO OUTPUTRECORD
+            WRITE OUTPUTFILE-RECORD FROM OUTPUTRECORD
+        END-IF
+    END-PERFORM.
+
+    CLOSE INPUTFILE.
+    CLOSE OUTPUTFILE.
+```
+
+**Notes:**
+- File status codes: `"00"` = success, `"10"` = end of file, `"30"` = permanent error, `"90"` = file not found
+- Files must be closed when done to ensure data is written
+- Files opened as OUTPUT will overwrite existing files
+- Files opened as EXTEND will append to existing files
+- Only sequential file organization is currently supported
 
 ### Evaluate Statement
 

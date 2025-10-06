@@ -32,12 +32,52 @@ impl CobolGenerator {
         self.write_line("       PROGRAM-ID. COBA-PROGRAM.");
         self.write_line("");
 
-        // Generate ENVIRONMENT DIVISION (minimal)
+        // Generate ENVIRONMENT DIVISION
         self.write_line("       ENVIRONMENT DIVISION.");
+
+        // Check if there are file declarations
+        let has_files = program.declarations.iter().any(|d| matches!(d, Declaration::File { .. }));
+
+        if has_files {
+            self.write_line("       INPUT-OUTPUT SECTION.");
+            self.write_line("       FILE-CONTROL.");
+
+            for decl in &program.declarations {
+                if let Declaration::File { name, status_var, .. } = decl {
+                    let file_name = name.to_uppercase().replace('_', "-");
+                    self.write_line(&format!("           SELECT {} ASSIGN TO \"{}\"", file_name, name));
+                    self.write_line("               ORGANIZATION IS SEQUENTIAL");
+                    if let Some(status) = status_var {
+                        let status_name = status.to_uppercase().replace('_', "-");
+                        self.write_line(&format!("               FILE STATUS IS {}", status_name));
+                    }
+                    self.write_line("           .");
+                }
+            }
+        }
+
         self.write_line("");
 
         // Generate DATA DIVISION
         self.write_line("       DATA DIVISION.");
+
+        // Generate FD section for files
+        if has_files {
+            self.write_line("       FILE SECTION.");
+
+            for decl in &program.declarations {
+                if let Declaration::File { name, record_type, .. } = decl {
+                    let file_name = name.to_uppercase().replace('_', "-");
+                    self.write_line(&format!("       FD {}.", file_name));
+
+                    let picture = record_type.to_cobol_picture();
+                    self.write_line(&format!("       01 {}-RECORD {}.", file_name, picture));
+                }
+            }
+
+            self.write_line("");
+        }
+
         self.write_line("       WORKING-STORAGE SECTION.");
 
         // Collect global variables
@@ -279,6 +319,237 @@ impl CobolGenerator {
                 };
 
                 self.write_line(&accept_str);
+            }
+
+            StmtKind::Initialize { variables } => {
+                for var in variables {
+                    let mangled = self.symbol_table.get_mangled_name(var)
+                        .unwrap_or_else(|| var.to_uppercase().replace('_', "-"));
+                    self.write_line(&format!("           INITIALIZE {}.", mangled));
+                }
+            }
+
+            StmtKind::Continue => {
+                self.write_line("           CONTINUE.");
+            }
+
+            StmtKind::Exit => {
+                self.write_line("           EXIT.");
+            }
+
+            StmtKind::SetIndex { index, operation } => {
+                use coba_ast::stmt::SetOperation;
+                let idx_name = index.to_uppercase().replace('_', "-");
+
+                match operation {
+                    SetOperation::To(expr) => {
+                        let value = self.generate_expr(expr);
+                        self.write_line(&format!("           SET {} TO {}.", idx_name, value));
+                    }
+                    SetOperation::UpBy(expr) => {
+                        let value = self.generate_expr(expr);
+                        self.write_line(&format!("           SET {} UP BY {}.", idx_name, value));
+                    }
+                    SetOperation::DownBy(expr) => {
+                        let value = self.generate_expr(expr);
+                        self.write_line(&format!("           SET {} DOWN BY {}.", idx_name, value));
+                    }
+                }
+            }
+
+            StmtKind::StringConcat { sources, destination, pointer } => {
+                let dest = self.symbol_table.get_mangled_name(destination)
+                    .unwrap_or_else(|| destination.to_uppercase().replace('_', "-"));
+
+                let mut string_line = String::from("           STRING ");
+
+                for (i, src) in sources.iter().enumerate() {
+                    if i > 0 {
+                        string_line.push_str(" ");
+                    }
+                    let src_str = self.generate_expr(&src.value);
+                    string_line.push_str(&src_str);
+
+                    if let Some(delim) = &src.delimiter {
+                        let delim_str = self.generate_expr(delim);
+                        string_line.push_str(&format!(" DELIMITED BY {}", delim_str));
+                    } else {
+                        string_line.push_str(" DELIMITED BY SIZE");
+                    }
+                }
+
+                string_line.push_str(&format!(" INTO {}", dest));
+
+                if let Some(ptr) = pointer {
+                    let ptr_name = ptr.to_uppercase().replace('_', "-");
+                    string_line.push_str(&format!(" WITH POINTER {}", ptr_name));
+                }
+
+                string_line.push('.');
+                self.write_line(&string_line);
+            }
+
+            StmtKind::StringSplit { source, delimiter, destinations, pointer, tallying } => {
+                let src = self.symbol_table.get_mangled_name(source)
+                    .unwrap_or_else(|| source.to_uppercase().replace('_', "-"));
+
+                let mut unstring_line = format!("           UNSTRING {}", src);
+
+                if let Some(delim) = delimiter {
+                    let delim_str = self.generate_expr(delim);
+                    unstring_line.push_str(&format!(" DELIMITED BY {}", delim_str));
+                }
+
+                unstring_line.push_str(" INTO");
+
+                for (i, dest) in destinations.iter().enumerate() {
+                    if i > 0 {
+                        unstring_line.push(',');
+                    }
+                    let dest_name = dest.to_uppercase().replace('_', "-");
+                    unstring_line.push_str(&format!(" {}", dest_name));
+                }
+
+                if let Some(ptr) = pointer {
+                    let ptr_name = ptr.to_uppercase().replace('_', "-");
+                    unstring_line.push_str(&format!(" WITH POINTER {}", ptr_name));
+                }
+
+                if let Some(counter) = tallying {
+                    let counter_name = counter.to_uppercase().replace('_', "-");
+                    unstring_line.push_str(&format!(" TALLYING IN {}", counter_name));
+                }
+
+                unstring_line.push('.');
+                self.write_line(&unstring_line);
+            }
+
+            StmtKind::StringInspect { target, operation } => {
+                use coba_ast::stmt::InspectOperation;
+
+                let tgt = self.symbol_table.get_mangled_name(target)
+                    .unwrap_or_else(|| target.to_uppercase().replace('_', "-"));
+
+                match operation {
+                    InspectOperation::Replacing { pattern, replacement } => {
+                        let pat = self.generate_expr(pattern);
+                        let rep = self.generate_expr(replacement);
+                        self.write_line(&format!("           INSPECT {} REPLACING {} BY {}.", tgt, pat, rep));
+                    }
+                    InspectOperation::ReplacingAll { pattern, replacement } => {
+                        let pat = self.generate_expr(pattern);
+                        let rep = self.generate_expr(replacement);
+                        self.write_line(&format!("           INSPECT {} REPLACING ALL {} BY {}.", tgt, pat, rep));
+                    }
+                    InspectOperation::Tallying { counter, pattern } => {
+                        let cnt = counter.to_uppercase().replace('_', "-");
+                        let pat = self.generate_expr(pattern);
+                        self.write_line(&format!("           INSPECT {} TALLYING {} FOR {}.", tgt, cnt, pat));
+                    }
+                    InspectOperation::TallyingAll { counter, pattern } => {
+                        let cnt = counter.to_uppercase().replace('_', "-");
+                        let pat = self.generate_expr(pattern);
+                        self.write_line(&format!("           INSPECT {} TALLYING {} FOR ALL {}.", tgt, cnt, pat));
+                    }
+                }
+            }
+
+            StmtKind::SearchLinear { array, index, at_end, when_clauses } => {
+                let arr = array.to_uppercase().replace('_', "-");
+
+                if let Some(idx) = index {
+                    let idx_name = idx.to_uppercase().replace('_', "-");
+                    self.write_line(&format!("           SEARCH {} VARYING {}", arr, idx_name));
+                } else {
+                    self.write_line(&format!("           SEARCH {}", arr));
+                }
+
+                if let Some(end_stmts) = at_end {
+                    self.write_line("               AT END");
+                    for stmt in end_stmts {
+                        self.generate_statement(stmt);
+                    }
+                }
+
+                for (cond, body) in when_clauses {
+                    let cond_str = self.generate_condition(cond);
+                    self.write_line(&format!("               WHEN {}", cond_str));
+                    for stmt in body {
+                        self.generate_statement(stmt);
+                    }
+                }
+
+                self.write_line("           END-SEARCH.");
+            }
+
+            StmtKind::SearchBinary { array, index, at_end, when_condition, when_body } => {
+                let arr = array.to_uppercase().replace('_', "-");
+
+                if let Some(idx) = index {
+                    let idx_name = idx.to_uppercase().replace('_', "-");
+                    self.write_line(&format!("           SEARCH ALL {} VARYING {}", arr, idx_name));
+                } else {
+                    self.write_line(&format!("           SEARCH ALL {}", arr));
+                }
+
+                if let Some(end_stmts) = at_end {
+                    self.write_line("               AT END");
+                    for stmt in end_stmts {
+                        self.generate_statement(stmt);
+                    }
+                }
+
+                let cond_str = self.generate_condition(when_condition);
+                self.write_line(&format!("               WHEN {}", cond_str));
+                for stmt in when_body {
+                    self.generate_statement(stmt);
+                }
+
+                self.write_line("           END-SEARCH.");
+            }
+
+            StmtKind::OpenFile { file, mode } => {
+                use coba_ast::stmt::FileMode;
+                let file_name = file.to_uppercase().replace('_', "-");
+
+                let mode_str = match mode {
+                    FileMode::Input => "INPUT",
+                    FileMode::Output => "OUTPUT",
+                    FileMode::Extend => "EXTEND",
+                };
+
+                self.write_line(&format!("           OPEN {} {}.", mode_str, file_name));
+            }
+
+            StmtKind::CloseFile { file } => {
+                let file_name = file.to_uppercase().replace('_', "-");
+                self.write_line(&format!("           CLOSE {}.", file_name));
+            }
+
+            StmtKind::ReadFile { file, record, at_end } => {
+                let file_name = file.to_uppercase().replace('_', "-");
+                let record_name = self.symbol_table.get_mangled_name(record)
+                    .unwrap_or_else(|| record.to_uppercase().replace('_', "-"));
+
+                self.write_line(&format!("           READ {} INTO {}", file_name, record_name));
+
+                if let Some(stmts) = at_end {
+                    self.write_line("               AT END");
+                    for stmt in stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-READ.");
+                } else {
+                    self.write_line("           .");
+                }
+            }
+
+            StmtKind::WriteFile { file, record } => {
+                let file_name = file.to_uppercase().replace('_', "-");
+                let record_name = self.symbol_table.get_mangled_name(record)
+                    .unwrap_or_else(|| record.to_uppercase().replace('_', "-"));
+
+                self.write_line(&format!("           WRITE {}-RECORD FROM {}.", file_name, record_name));
             }
         }
     }

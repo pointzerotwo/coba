@@ -82,6 +82,115 @@ pub enum StmtKind {
         variable: String,
         source: AcceptSource,
     },
+
+    /// Initialize statement: initialize variable
+    Initialize {
+        variables: Vec<String>,
+    },
+
+    /// Continue statement: no-op placeholder
+    Continue,
+
+    /// Exit statement: exit function/paragraph
+    Exit,
+
+    /// String concatenation: string src1, src2 delimited by X into dest
+    StringConcat {
+        sources: Vec<StringSource>,
+        destination: String,
+        pointer: Option<String>,
+    },
+
+    /// String split: unstring source delimited by X into dest1, dest2
+    StringSplit {
+        source: String,
+        delimiter: Option<Expr>,
+        destinations: Vec<String>,
+        pointer: Option<String>,
+        tallying: Option<String>,
+    },
+
+    /// String inspection: inspect string replacing/tallying
+    StringInspect {
+        target: String,
+        operation: InspectOperation,
+    },
+
+    /// Search statement: search array when condition
+    SearchLinear {
+        array: String,
+        index: Option<String>,
+        at_end: Option<Vec<Stmt>>,
+        when_clauses: Vec<(Expr, Vec<Stmt>)>,
+    },
+
+    /// Binary search: searchall array when condition
+    SearchBinary {
+        array: String,
+        index: Option<String>,
+        at_end: Option<Vec<Stmt>>,
+        when_condition: Expr,
+        when_body: Vec<Stmt>,
+    },
+
+    /// Set statement: set index to value / set index up by N
+    SetIndex {
+        index: String,
+        operation: SetOperation,
+    },
+
+    /// Open file: open file input/output/extend
+    OpenFile {
+        file: String,
+        mode: FileMode,
+    },
+
+    /// Close file: close file
+    CloseFile {
+        file: String,
+    },
+
+    /// Read from file: read file into record
+    ReadFile {
+        file: String,
+        record: String,
+        at_end: Option<Vec<Stmt>>,
+    },
+
+    /// Write to file: write record to file
+    WriteFile {
+        file: String,
+        record: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FileMode {
+    Input,
+    Output,
+    Extend,
+    // Future: InputOutput
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct StringSource {
+    pub value: Expr,
+    pub delimiter: Option<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InspectOperation {
+    Replacing { pattern: Expr, replacement: Expr },
+    Tallying { counter: String, pattern: Expr },
+    ReplacingAll { pattern: Expr, replacement: Expr },
+    TallyingAll { counter: String, pattern: Expr },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SetOperation {
+    To(Expr),
+    UpBy(Expr),
+    DownBy(Expr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
