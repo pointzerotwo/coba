@@ -85,6 +85,18 @@ pub enum TokenKind {
     Access,
     Status,
 
+    // Arithmetic
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Compute,
+    Giving,
+    Remainder,
+    On,
+    Size,
+    ErrorKeyword,
+
     // Identifiers
     Identifier,
 
@@ -182,6 +194,16 @@ impl TokenKind {
             "organization" => Some(TokenKind::Organization),
             "access" => Some(TokenKind::Access),
             "status" => Some(TokenKind::Status),
+            "add" => Some(TokenKind::Add),
+            "subtract" => Some(TokenKind::Subtract),
+            "multiply" => Some(TokenKind::Multiply),
+            "divide" => Some(TokenKind::Divide),
+            "compute" => Some(TokenKind::Compute),
+            "giving" => Some(TokenKind::Giving),
+            "remainder" => Some(TokenKind::Remainder),
+            "on" => Some(TokenKind::On),
+            "size" => Some(TokenKind::Size),
+            "error" => Some(TokenKind::ErrorKeyword),
             "true" => Some(TokenKind::True),
             "false" => Some(TokenKind::False),
             _ => None,

@@ -162,6 +162,46 @@ pub enum StmtKind {
         file: String,
         record: String,
     },
+
+    /// Add statement: add a to b giving c
+    Add {
+        operands: Vec<Expr>,
+        to: Option<Vec<String>>,
+        giving: Option<String>,
+        on_size_error: Option<Vec<Stmt>>,
+    },
+
+    /// Subtract statement: subtract a from b giving c
+    Subtract {
+        operands: Vec<Expr>,
+        from: Expr,
+        giving: Option<String>,
+        on_size_error: Option<Vec<Stmt>>,
+    },
+
+    /// Multiply statement: multiply a by b giving c
+    Multiply {
+        operand1: Expr,
+        operand2: Expr,
+        giving: Option<String>,
+        on_size_error: Option<Vec<Stmt>>,
+    },
+
+    /// Divide statement: divide a by b giving c remainder d
+    Divide {
+        dividend: Expr,
+        divisor: Expr,
+        giving: Option<String>,
+        remainder: Option<String>,
+        on_size_error: Option<Vec<Stmt>>,
+    },
+
+    /// Compute statement: compute result = expression
+    Compute {
+        target: String,
+        expression: Expr,
+        on_size_error: Option<Vec<Stmt>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

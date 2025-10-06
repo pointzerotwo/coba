@@ -217,6 +217,16 @@ impl Parser {
             self.read_stmt()?
         } else if self.match_token(&TokenKind::Write) {
             self.write_stmt()?
+        } else if self.match_token(&TokenKind::Add) {
+            self.add_stmt()?
+        } else if self.match_token(&TokenKind::Subtract) {
+            self.subtract_stmt()?
+        } else if self.match_token(&TokenKind::Multiply) {
+            self.multiply_stmt()?
+        } else if self.match_token(&TokenKind::Divide) {
+            self.divide_stmt()?
+        } else if self.match_token(&TokenKind::Compute) {
+            self.compute_stmt()?
         } else if self.match_token(&TokenKind::If) {
             self.if_stmt()?
         } else if self.match_token(&TokenKind::Evaluate) {
@@ -782,6 +792,155 @@ impl Parser {
         let file = self.consume_identifier("Expected file name")?;
 
         Ok(StmtKind::WriteFile { file, record })
+    }
+
+    /// Parse add statement: add a, b to c, d giving e on size error: ...
+    fn add_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        // Parse operands (at least one)
+        let mut operands = vec![self.expression()?];
+        while self.match_token(&TokenKind::Comma) {
+            operands.push(self.expression()?);
+        }
+
+        // Parse TO clause (optional)
+        let to = if self.match_token(&TokenKind::To) {
+            let mut targets = vec![self.consume_identifier("Expected variable name")?];
+            while self.match_token(&TokenKind::Comma) {
+                targets.push(self.consume_identifier("Expected variable name")?);
+            }
+            Some(targets)
+        } else {
+            None
+        };
+
+        // Parse GIVING clause (optional)
+        let giving = if self.match_token(&TokenKind::Giving) {
+            Some(self.consume_identifier("Expected variable name")?)
+        } else {
+            None
+        };
+
+        // Parse ON SIZE ERROR clause (optional)
+        let on_size_error = self.parse_on_size_error()?;
+
+        Ok(StmtKind::Add { operands, to, giving, on_size_error })
+    }
+
+    /// Parse subtract statement: subtract a, b from c giving d on size error: ...
+    fn subtract_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        // Parse operands (at least one)
+        let mut operands = vec![self.expression()?];
+        while self.match_token(&TokenKind::Comma) {
+            operands.push(self.expression()?);
+        }
+
+        // Parse FROM clause (required)
+        self.consume(&TokenKind::From, "Expected 'from' in subtract statement")?;
+        let from = self.expression()?;
+
+        // Parse GIVING clause (optional)
+        let giving = if self.match_token(&TokenKind::Giving) {
+            Some(self.consume_identifier("Expected variable name")?)
+        } else {
+            None
+        };
+
+        // Parse ON SIZE ERROR clause (optional)
+        let on_size_error = self.parse_on_size_error()?;
+
+        Ok(StmtKind::Subtract { operands, from, giving, on_size_error })
+    }
+
+    /// Parse multiply statement: multiply a by b giving c on size error: ...
+    fn multiply_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let operand1 = self.expression()?;
+
+        self.consume(&TokenKind::By, "Expected 'by' in multiply statement")?;
+        let operand2 = self.expression()?;
+
+        // Parse GIVING clause (optional)
+        let giving = if self.match_token(&TokenKind::Giving) {
+            Some(self.consume_identifier("Expected variable name")?)
+        } else {
+            None
+        };
+
+        // Parse ON SIZE ERROR clause (optional)
+        let on_size_error = self.parse_on_size_error()?;
+
+        Ok(StmtKind::Multiply { operand1, operand2, giving, on_size_error })
+    }
+
+    /// Parse divide statement: divide a by b giving c remainder d on size error: ...
+    fn divide_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let dividend = self.expression()?;
+
+        self.consume(&TokenKind::By, "Expected 'by' in divide statement")?;
+        let divisor = self.expression()?;
+
+        // Parse GIVING clause (optional)
+        let giving = if self.match_token(&TokenKind::Giving) {
+            Some(self.consume_identifier("Expected variable name")?)
+        } else {
+            None
+        };
+
+        // Parse REMAINDER clause (optional)
+        let remainder = if self.match_token(&TokenKind::Remainder) {
+            Some(self.consume_identifier("Expected variable name")?)
+        } else {
+            None
+        };
+
+        // Parse ON SIZE ERROR clause (optional)
+        let on_size_error = self.parse_on_size_error()?;
+
+        Ok(StmtKind::Divide { dividend, divisor, giving, remainder, on_size_error })
+    }
+
+    /// Parse compute statement: compute result = expression on size error: ...
+    fn compute_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let target = self.consume_identifier("Expected variable name")?;
+
+        self.consume(&TokenKind::Equal, "Expected '=' in compute statement")?;
+        let expression = self.expression()?;
+
+        // Parse ON SIZE ERROR clause (optional)
+        let on_size_error = self.parse_on_size_error()?;
+
+        Ok(StmtKind::Compute { target, expression, on_size_error })
+    }
+
+    /// Parse ON SIZE ERROR clause (helper)
+    fn parse_on_size_error(&mut self) -> Result<Option<Vec<Stmt>>, ParseError> {
+        if self.match_token(&TokenKind::On) {
+            self.consume(&TokenKind::Size, "Expected 'size' after 'on'")?;
+            self.consume(&TokenKind::ErrorKeyword, "Expected 'error' after 'size'")?;
+            self.consume(&TokenKind::Colon, "Expected ':' after 'on size error'")?;
+
+            let mut stmts = Vec::new();
+            while !self.check(&TokenKind::End) && !self.is_at_end() && !self.is_next_statement() {
+                stmts.push(self.statement()?);
+            }
+
+            if self.match_token(&TokenKind::End) {
+                // Consumed optional 'end' keyword
+            }
+
+            Ok(Some(stmts))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Helper to check if the next token starts a new statement
+    fn is_next_statement(&self) -> bool {
+        matches!(
+            self.peek().kind,
+            TokenKind::Set | TokenKind::Call | TokenKind::Print | TokenKind::If |
+            TokenKind::While | TokenKind::For | TokenKind::Return | TokenKind::Add |
+            TokenKind::Subtract | TokenKind::Multiply | TokenKind::Divide | TokenKind::Compute
+        )
     }
 
     /// Parse an expression

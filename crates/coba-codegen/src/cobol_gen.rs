@@ -551,6 +551,157 @@ impl CobolGenerator {
 
                 self.write_line(&format!("           WRITE {}-RECORD FROM {}.", file_name, record_name));
             }
+
+            StmtKind::Add { operands, to, giving, on_size_error } => {
+                let mut add_line = String::from("           ADD ");
+
+                // Generate operands
+                let operand_strs: Vec<String> = operands.iter()
+                    .map(|op| self.generate_expr(op))
+                    .collect();
+                add_line.push_str(&operand_strs.join(", "));
+
+                // TO clause
+                if let Some(to_vars) = to {
+                    let to_strs: Vec<String> = to_vars.iter()
+                        .map(|var| self.symbol_table.get_mangled_name(var)
+                            .unwrap_or_else(|| var.to_uppercase().replace('_', "-")))
+                        .collect();
+                    add_line.push_str(&format!(" TO {}", to_strs.join(", ")));
+                }
+
+                // GIVING clause
+                if let Some(giving_var) = giving {
+                    let giving_name = self.symbol_table.get_mangled_name(giving_var)
+                        .unwrap_or_else(|| giving_var.to_uppercase().replace('_', "-"));
+                    add_line.push_str(&format!(" GIVING {}", giving_name));
+                }
+
+                if let Some(error_stmts) = on_size_error {
+                    self.write_line(&add_line);
+                    self.write_line("               ON SIZE ERROR");
+                    for stmt in error_stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-ADD.");
+                } else {
+                    add_line.push('.');
+                    self.write_line(&add_line);
+                }
+            }
+
+            StmtKind::Subtract { operands, from, giving, on_size_error } => {
+                let mut subtract_line = String::from("           SUBTRACT ");
+
+                // Generate operands
+                let operand_strs: Vec<String> = operands.iter()
+                    .map(|op| self.generate_expr(op))
+                    .collect();
+                subtract_line.push_str(&operand_strs.join(", "));
+
+                // FROM clause
+                let from_str = self.generate_expr(from);
+                subtract_line.push_str(&format!(" FROM {}", from_str));
+
+                // GIVING clause
+                if let Some(giving_var) = giving {
+                    let giving_name = self.symbol_table.get_mangled_name(giving_var)
+                        .unwrap_or_else(|| giving_var.to_uppercase().replace('_', "-"));
+                    subtract_line.push_str(&format!(" GIVING {}", giving_name));
+                }
+
+                if let Some(error_stmts) = on_size_error {
+                    self.write_line(&subtract_line);
+                    self.write_line("               ON SIZE ERROR");
+                    for stmt in error_stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-SUBTRACT.");
+                } else {
+                    subtract_line.push('.');
+                    self.write_line(&subtract_line);
+                }
+            }
+
+            StmtKind::Multiply { operand1, operand2, giving, on_size_error } => {
+                let mut multiply_line = String::from("           MULTIPLY ");
+
+                let op1_str = self.generate_expr(operand1);
+                let op2_str = self.generate_expr(operand2);
+                multiply_line.push_str(&format!("{} BY {}", op1_str, op2_str));
+
+                // GIVING clause
+                if let Some(giving_var) = giving {
+                    let giving_name = self.symbol_table.get_mangled_name(giving_var)
+                        .unwrap_or_else(|| giving_var.to_uppercase().replace('_', "-"));
+                    multiply_line.push_str(&format!(" GIVING {}", giving_name));
+                }
+
+                if let Some(error_stmts) = on_size_error {
+                    self.write_line(&multiply_line);
+                    self.write_line("               ON SIZE ERROR");
+                    for stmt in error_stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-MULTIPLY.");
+                } else {
+                    multiply_line.push('.');
+                    self.write_line(&multiply_line);
+                }
+            }
+
+            StmtKind::Divide { dividend, divisor, giving, remainder, on_size_error } => {
+                let mut divide_line = String::from("           DIVIDE ");
+
+                let dividend_str = self.generate_expr(dividend);
+                let divisor_str = self.generate_expr(divisor);
+                divide_line.push_str(&format!("{} BY {}", dividend_str, divisor_str));
+
+                // GIVING clause
+                if let Some(giving_var) = giving {
+                    let giving_name = self.symbol_table.get_mangled_name(giving_var)
+                        .unwrap_or_else(|| giving_var.to_uppercase().replace('_', "-"));
+                    divide_line.push_str(&format!(" GIVING {}", giving_name));
+                }
+
+                // REMAINDER clause
+                if let Some(remainder_var) = remainder {
+                    let remainder_name = self.symbol_table.get_mangled_name(remainder_var)
+                        .unwrap_or_else(|| remainder_var.to_uppercase().replace('_', "-"));
+                    divide_line.push_str(&format!(" REMAINDER {}", remainder_name));
+                }
+
+                if let Some(error_stmts) = on_size_error {
+                    self.write_line(&divide_line);
+                    self.write_line("               ON SIZE ERROR");
+                    for stmt in error_stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-DIVIDE.");
+                } else {
+                    divide_line.push('.');
+                    self.write_line(&divide_line);
+                }
+            }
+
+            StmtKind::Compute { target, expression, on_size_error } => {
+                let target_name = self.symbol_table.get_mangled_name(target)
+                    .unwrap_or_else(|| target.to_uppercase().replace('_', "-"));
+                let expr_str = self.generate_expr(expression);
+
+                let compute_line = format!("           COMPUTE {} = {}", target_name, expr_str);
+
+                if let Some(error_stmts) = on_size_error {
+                    self.write_line(&compute_line);
+                    self.write_line("               ON SIZE ERROR");
+                    for stmt in error_stmts {
+                        self.generate_statement(stmt);
+                    }
+                    self.write_line("           END-COMPUTE.");
+                } else {
+                    self.write_line(&format!("{}.", compute_line));
+                }
+            }
         }
     }
 

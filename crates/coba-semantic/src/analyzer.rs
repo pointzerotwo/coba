@@ -584,6 +584,90 @@ impl SemanticAnalyzer {
                     self.errors.push(format!("Undefined record variable: {}", record));
                 }
             }
+
+            StmtKind::Add { operands, to, giving, on_size_error } => {
+                let checker = TypeChecker::new(&self.symbol_table);
+                for operand in operands {
+                    if let Err(e) = checker.check_expr(operand) {
+                        self.errors.push(format!("Type error in arithmetic: {}", e));
+                    }
+                }
+                if let Some(targets) = to {
+                    for target in targets {
+                        if self.symbol_table.lookup(target).is_none() {
+                            self.errors.push(format!("Undefined variable: {}", target));
+                        }
+                    }
+                }
+                if let Some(target) = giving {
+                    if self.symbol_table.lookup(target).is_none() {
+                        self.errors.push(format!("Undefined variable: {}", target));
+                    }
+                }
+                if let Some(stmts) = on_size_error {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
+
+            StmtKind::Subtract { operands, from, giving, on_size_error } => {
+                let checker = TypeChecker::new(&self.symbol_table);
+                for operand in operands {
+                    if let Err(e) = checker.check_expr(operand) {
+                        self.errors.push(format!("Type error in arithmetic: {}", e));
+                    }
+                }
+                if let Err(e) = checker.check_expr(from) {
+                    self.errors.push(format!("Type error in FROM expression: {}", e));
+                }
+                if let Some(target) = giving {
+                    if self.symbol_table.lookup(target).is_none() {
+                        self.errors.push(format!("Undefined variable: {}", target));
+                    }
+                }
+                if let Some(stmts) = on_size_error {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
+
+            StmtKind::Multiply { operand1, operand2, giving, on_size_error } |
+            StmtKind::Divide { dividend: operand1, divisor: operand2, giving, on_size_error, .. } => {
+                let checker = TypeChecker::new(&self.symbol_table);
+                if let Err(e) = checker.check_expr(operand1) {
+                    self.errors.push(format!("Type error in arithmetic: {}", e));
+                }
+                if let Err(e) = checker.check_expr(operand2) {
+                    self.errors.push(format!("Type error in arithmetic: {}", e));
+                }
+                if let Some(target) = giving {
+                    if self.symbol_table.lookup(target).is_none() {
+                        self.errors.push(format!("Undefined variable: {}", target));
+                    }
+                }
+                if let Some(stmts) = on_size_error {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
+
+            StmtKind::Compute { target, expression, on_size_error } => {
+                if self.symbol_table.lookup(target).is_none() {
+                    self.errors.push(format!("Undefined variable: {}", target));
+                }
+                let checker = TypeChecker::new(&self.symbol_table);
+                if let Err(e) = checker.check_expr(expression) {
+                    self.errors.push(format!("Type error in compute: {}", e));
+                }
+                if let Some(stmts) = on_size_error {
+                    for stmt in stmts {
+                        self.analyze_statement(stmt);
+                    }
+                }
+            }
         }
     }
 
