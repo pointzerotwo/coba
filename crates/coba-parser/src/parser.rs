@@ -159,7 +159,7 @@ impl Parser {
 
             Type::text(length as u16)
         } else if self.match_token(&TokenKind::Int) {
-            Type::Integer
+            Type::integer()
         } else if self.match_token(&TokenKind::Bool) {
             Type::Boolean
         } else {

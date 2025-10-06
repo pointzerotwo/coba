@@ -708,9 +708,9 @@ fn types_compatible(left: &coba_ast::types::Type, right: &coba_ast::types::Type)
 
     match (left, right) {
         (Type::Decimal { .. }, Type::Decimal { .. }) => true,
-        (Type::Decimal { .. }, Type::Integer) => true,
-        (Type::Integer, Type::Decimal { .. }) => true,
-        (Type::Integer, Type::Integer) => true,
+        (Type::Decimal { .. }, Type::Integer { .. }) => true,
+        (Type::Integer { .. }, Type::Decimal { .. }) => true,
+        (Type::Integer { .. }, Type::Integer { .. }) => true,
         (Type::Text { .. }, Type::Text { .. }) => true,
         (Type::Boolean, Type::Boolean) => true,
         _ => false,

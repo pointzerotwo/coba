@@ -12,6 +12,6 @@ pub mod intrinsics;
 
 pub use expr::Expr;
 pub use stmt::Stmt;
-pub use types::Type;
+pub use types::{Type, StorageFormat};
 pub use program::Program;
 pub use cobol_ast::CobolProgram;

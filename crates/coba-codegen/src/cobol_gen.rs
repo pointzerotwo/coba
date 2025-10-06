@@ -132,7 +132,7 @@ impl CobolGenerator {
         } else {
             // Default values
             let default_value = match type_ {
-                Type::Decimal { .. } | Type::Integer => "0",
+                Type::Decimal { .. } | Type::Integer { .. } => "0",
                 Type::Text { .. } => "SPACES",
                 Type::Boolean => "0",
                 Type::Array { .. } => unreachable!(), // Handled above

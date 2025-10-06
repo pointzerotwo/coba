@@ -1,15 +1,35 @@
 /// Type system for Coba
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum StorageFormat {
+    /// DISPLAY - character storage (default)
+    Display,
+    /// COMP / COMPUTATIONAL - binary storage
+    Comp,
+    /// COMP-3 / PACKED-DECIMAL - packed decimal storage
+    Comp3,
+}
+
+impl Default for StorageFormat {
+    fn default() -> Self {
+        StorageFormat::Display
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    /// decimal(precision, scale)
-    Decimal { precision: u8, scale: u8 },
+    /// decimal(precision, scale) with optional storage format
+    Decimal {
+        precision: u8,
+        scale: u8,
+        storage: StorageFormat,
+    },
 
     /// text(length)
     Text { length: u16 },
 
-    /// integer (shorthand for decimal(9, 0))
-    Integer,
+    /// integer (shorthand for decimal(9, 0)) with optional storage format
+    Integer { storage: StorageFormat },
 
     /// boolean
     Boolean,
@@ -22,9 +42,34 @@ pub enum Type {
 }
 
 impl Type {
-    /// Create a decimal type
+    /// Create a decimal type with default DISPLAY storage
     pub fn decimal(precision: u8, scale: u8) -> Self {
-        Type::Decimal { precision, scale }
+        Type::Decimal {
+            precision,
+            scale,
+            storage: StorageFormat::Display,
+        }
+    }
+
+    /// Create a decimal type with specified storage format
+    pub fn decimal_with_storage(precision: u8, scale: u8, storage: StorageFormat) -> Self {
+        Type::Decimal {
+            precision,
+            scale,
+            storage,
+        }
+    }
+
+    /// Create an integer type with default DISPLAY storage
+    pub fn integer() -> Self {
+        Type::Integer {
+            storage: StorageFormat::Display,
+        }
+    }
+
+    /// Create an integer type with specified storage format
+    pub fn integer_with_storage(storage: StorageFormat) -> Self {
+        Type::Integer { storage }
     }
 
     /// Create a text type
@@ -35,11 +80,11 @@ impl Type {
     /// Get the maximum value for a decimal type
     pub fn max_decimal_value(&self) -> Option<f64> {
         match self {
-            Type::Decimal { precision, scale } => {
+            Type::Decimal { precision, scale, .. } => {
                 let max = 10_f64.powi(*precision as i32) - 10_f64.powi(-(*scale as i32));
                 Some(max)
             }
-            Type::Integer => {
+            Type::Integer { .. } => {
                 Some(999_999_999.0)
             }
             Type::Array { element_type, .. } => {
@@ -50,11 +95,11 @@ impl Type {
         }
     }
 
-    /// Convert to COBOL PICTURE clause
+    /// Convert to COBOL PICTURE clause with storage format
     pub fn to_cobol_picture(&self) -> String {
         match self {
-            Type::Decimal { precision, scale } => {
-                if *scale == 0 {
+            Type::Decimal { precision, scale, storage } => {
+                let pic = if *scale == 0 {
                     format!("PIC 9({})", precision)
                 } else {
                     let int_digits = precision - scale;
@@ -63,6 +108,11 @@ impl Type {
                     } else {
                         format!("PIC 9({})V9({})", int_digits, scale)
                     }
+                };
+                match storage {
+                    StorageFormat::Display => pic,
+                    StorageFormat::Comp => format!("{} COMP", pic),
+                    StorageFormat::Comp3 => format!("{} COMP-3", pic),
                 }
             }
             Type::Text { length } => {
@@ -72,7 +122,14 @@ impl Type {
                     format!("PIC X({})", length)
                 }
             }
-            Type::Integer => "PIC 9(9)".to_string(),
+            Type::Integer { storage } => {
+                let pic = "PIC 9(9)";
+                match storage {
+                    StorageFormat::Display => pic.to_string(),
+                    StorageFormat::Comp => format!("{} COMP", pic),
+                    StorageFormat::Comp3 => format!("{} COMP-3", pic),
+                }
+            }
             Type::Boolean => "PIC 9".to_string(),
             Type::Array { element_type, size } => {
                 // For arrays, generate element type's picture with OCCURS
@@ -85,9 +142,18 @@ impl Type {
     pub fn from_cobol_picture(picture: &str) -> Option<Self> {
         let pic = picture.trim().to_uppercase();
 
+        // Check for storage format suffixes
+        let (pic, storage) = if pic.ends_with("COMP-3") || pic.ends_with("PACKED-DECIMAL") {
+            (pic.trim_end_matches("COMP-3").trim_end_matches("PACKED-DECIMAL").trim(), StorageFormat::Comp3)
+        } else if pic.ends_with("COMP") || pic.ends_with("COMPUTATIONAL") {
+            (pic.trim_end_matches("COMP").trim_end_matches("COMPUTATIONAL").trim(), StorageFormat::Comp)
+        } else {
+            (pic.as_str(), StorageFormat::Display)
+        };
+
         // Remove "PIC" or "PICTURE" prefix
         let pic = pic.strip_prefix("PIC").or_else(|| pic.strip_prefix("PICTURE"))
-            .unwrap_or(&pic)
+            .unwrap_or(pic)
             .trim();
 
         // Match patterns
@@ -102,10 +168,12 @@ impl Type {
             None
         } else if pic == "9" {
             Some(Type::Boolean)
+        } else if pic == "9(9)" {
+            Some(Type::Integer { storage })
         } else if let Some(rest) = pic.strip_prefix("9(") {
             if let Some(digits_str) = rest.strip_suffix(')') {
                 if let Ok(precision) = digits_str.parse::<u8>() {
-                    return Some(Type::decimal(precision, 0));
+                    return Some(Type::decimal_with_storage(precision, 0, storage));
                 }
             }
             None
@@ -145,7 +213,7 @@ impl Type {
                 return None;
             };
 
-            Some(Type::decimal(int_digits + dec_digits, dec_digits))
+            Some(Type::decimal_with_storage(int_digits + dec_digits, dec_digits, storage))
         } else {
             None
         }

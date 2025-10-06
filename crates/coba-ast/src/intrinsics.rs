@@ -56,7 +56,7 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         IntrinsicFunction::new(
             "length",
             vec![Type::text(9999)],
-            Type::Integer,
+            Type::integer(),
             "LENGTH",
         ),
         IntrinsicFunction::new(
@@ -100,13 +100,13 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         IntrinsicFunction::new(
             "integer",
             vec![Type::decimal(18, 2)],
-            Type::Integer,
+            Type::integer(),
             "INTEGER",
         ),
         IntrinsicFunction::new(
             "integer_part",
             vec![Type::decimal(18, 2)],
-            Type::Integer,
+            Type::integer(),
             "INTEGER-PART",
         ),
         IntrinsicFunction::new(
@@ -209,8 +209,8 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         ),
         IntrinsicFunction::new(
             "factorial",
-            vec![Type::Integer],
-            Type::Integer,
+            vec![Type::integer()],
+            Type::integer(),
             "FACTORIAL",
         ),
 
@@ -229,14 +229,14 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         ),
         IntrinsicFunction::new(
             "date_of_integer",
-            vec![Type::Integer],
-            Type::Integer,
+            vec![Type::integer()],
+            Type::integer(),
             "DATE-OF-INTEGER",
         ),
         IntrinsicFunction::new(
             "day_of_integer",
-            vec![Type::Integer],
-            Type::Integer,
+            vec![Type::integer()],
+            Type::integer(),
             "DAY-OF-INTEGER",
         ),
 
@@ -287,13 +287,13 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         // Financial Functions
         IntrinsicFunction::new(
             "annuity",
-            vec![Type::decimal(18, 2), Type::Integer],
+            vec![Type::decimal(18, 2), Type::integer()],
             Type::decimal(18, 2),
             "ANNUITY",
         ),
         IntrinsicFunction::new(
             "present_value",
-            vec![Type::decimal(18, 2), Type::Integer],
+            vec![Type::decimal(18, 2), Type::integer()],
             Type::decimal(18, 2),
             "PRESENT-VALUE",
         ),
@@ -301,27 +301,27 @@ pub fn get_intrinsic_functions() -> Vec<IntrinsicFunction> {
         // Character Functions
         IntrinsicFunction::new(
             "char",
-            vec![Type::Integer],
+            vec![Type::integer()],
             Type::text(1),
             "CHAR",
         ),
         IntrinsicFunction::new(
             "ord",
             vec![Type::text(1)],
-            Type::Integer,
+            Type::integer(),
             "ORD",
         ),
         IntrinsicFunction::variadic(
             "ord_max",
             vec![Type::text(1)],
-            Type::Integer,
+            Type::integer(),
             1,
             "ORD-MAX",
         ),
         IntrinsicFunction::variadic(
             "ord_min",
             vec![Type::text(1)],
-            Type::Integer,
+            Type::integer(),
             1,
             "ORD-MIN",
         ),

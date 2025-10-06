@@ -175,7 +175,7 @@ impl<'a> TypeChecker<'a> {
 
             ExprKind::Call { .. } => {
                 // Procedures don't return values in current spec
-                Ok(Type::Integer) // Placeholder
+                Ok(Type::integer()) // Placeholder
             }
 
             ExprKind::FunctionCall { name, arguments } => {
@@ -259,16 +259,16 @@ impl<'a> TypeChecker<'a> {
 
 /// Check if a type is numeric
 fn is_numeric(type_: &Type) -> bool {
-    matches!(type_, Type::Decimal { .. } | Type::Integer)
+    matches!(type_, Type::Decimal { .. } | Type::Integer { .. })
 }
 
 /// Check if two types are compatible for comparison
 fn types_compatible(left: &Type, right: &Type) -> bool {
     match (left, right) {
         (Type::Decimal { .. }, Type::Decimal { .. }) => true,
-        (Type::Decimal { .. }, Type::Integer) => true,
-        (Type::Integer, Type::Decimal { .. }) => true,
-        (Type::Integer, Type::Integer) => true,
+        (Type::Decimal { .. }, Type::Integer { .. }) => true,
+        (Type::Integer { .. }, Type::Decimal { .. }) => true,
+        (Type::Integer { .. }, Type::Integer { .. }) => true,
         (Type::Text { .. }, Type::Text { .. }) => true,
         (Type::Boolean, Type::Boolean) => true,
         _ => false,
@@ -278,12 +278,12 @@ fn types_compatible(left: &Type, right: &Type) -> bool {
 /// Widen two numeric types to their common type
 fn widen_type(left: &Type, right: &Type) -> Type {
     match (left, right) {
-        (Type::Decimal { precision: p1, scale: s1 }, Type::Decimal { precision: p2, scale: s2 }) => {
+        (Type::Decimal { precision: p1, scale: s1, .. }, Type::Decimal { precision: p2, scale: s2, .. }) => {
             Type::decimal(*p1.max(p2), *s1.max(s2))
         }
-        (Type::Decimal { .. }, Type::Integer) => left.clone(),
-        (Type::Integer, Type::Decimal { .. }) => right.clone(),
-        (Type::Integer, Type::Integer) => Type::Integer,
+        (Type::Decimal { .. }, Type::Integer { .. }) => left.clone(),
+        (Type::Integer { .. }, Type::Decimal { .. }) => right.clone(),
+        (Type::Integer { .. }, Type::Integer { .. }) => left.clone(),
         _ => left.clone(),
     }
 }
