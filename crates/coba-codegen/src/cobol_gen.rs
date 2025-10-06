@@ -601,6 +601,26 @@ impl CobolGenerator {
                 "0".to_string()
             }
 
+            ExprKind::FunctionCall { name, arguments } => {
+                use coba_ast::intrinsics;
+
+                // Look up the intrinsic function to get the COBOL name
+                let cobol_name = intrinsics::lookup_intrinsic(name)
+                    .map(|f| f.cobol_name.to_string())
+                    .unwrap_or_else(|| name.to_uppercase().replace('_', "-"));
+
+                // Generate arguments
+                if arguments.is_empty() {
+                    format!("FUNCTION {}", cobol_name)
+                } else {
+                    let args: Vec<String> = arguments
+                        .iter()
+                        .map(|arg| self.generate_expr(arg))
+                        .collect();
+                    format!("FUNCTION {}({})", cobol_name, args.join(", "))
+                }
+            }
+
             ExprKind::Index { array, index } => {
                 let array_str = self.generate_expr(array);
                 let index_str = self.generate_expr(index);

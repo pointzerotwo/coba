@@ -48,6 +48,12 @@ pub enum ExprKind {
         arguments: Vec<Expr>,
     },
 
+    /// Intrinsic function call: length(str), max(a, b)
+    FunctionCall {
+        name: String,
+        arguments: Vec<Expr>,
+    },
+
     /// Array indexing: arr[0]
     Index {
         array: Box<Expr>,

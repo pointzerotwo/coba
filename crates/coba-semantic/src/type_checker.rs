@@ -10,6 +10,7 @@ use crate::symbol_table::SymbolTable;
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeError {
     UndefinedVariable(String),
+    UndefinedFunction(String),
     TypeMismatch {
         expected: Type,
         found: Type,
@@ -23,12 +24,24 @@ pub enum TypeError {
         op: String,
         operand: Type,
     },
+    WrongArgumentCount {
+        function: String,
+        expected: usize,
+        got: usize,
+    },
+    InvalidArgumentType {
+        function: String,
+        argument: usize,
+        expected: Type,
+        got: Type,
+    },
 }
 
 impl std::fmt::Display for TypeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TypeError::UndefinedVariable(name) => write!(f, "Undefined variable: {}", name),
+            TypeError::UndefinedFunction(name) => write!(f, "Undefined function: {}", name),
             TypeError::TypeMismatch { expected, found } => {
                 write!(f, "Type mismatch: expected {:?}, found {:?}", expected, found)
             }
@@ -37,6 +50,12 @@ impl std::fmt::Display for TypeError {
             }
             TypeError::InvalidUnaryOperation { op, operand } => {
                 write!(f, "Invalid unary operation {} for type {:?}", op, operand)
+            }
+            TypeError::WrongArgumentCount { function, expected, got } => {
+                write!(f, "Wrong number of arguments to function {}: expected {}, got {}", function, expected, got)
+            }
+            TypeError::InvalidArgumentType { function, argument, expected, got } => {
+                write!(f, "Invalid type for argument {} to function {}: expected {:?}, got {:?}", argument, function, expected, got)
             }
         }
     }
@@ -157,6 +176,59 @@ impl<'a> TypeChecker<'a> {
             ExprKind::Call { .. } => {
                 // Procedures don't return values in current spec
                 Ok(Type::Integer) // Placeholder
+            }
+
+            ExprKind::FunctionCall { name, arguments } => {
+                use coba_ast::intrinsics;
+
+                // Look up the intrinsic function
+                let func = intrinsics::lookup_intrinsic(name)
+                    .ok_or_else(|| TypeError::UndefinedFunction(name.clone()))?;
+
+                // Check argument count
+                let arg_count = arguments.len();
+                if arg_count < func.min_args {
+                    return Err(TypeError::WrongArgumentCount {
+                        function: name.clone(),
+                        expected: func.min_args,
+                        got: arg_count,
+                    });
+                }
+                if let Some(max_args) = func.max_args {
+                    if arg_count > max_args {
+                        return Err(TypeError::WrongArgumentCount {
+                            function: name.clone(),
+                            expected: max_args,
+                            got: arg_count,
+                        });
+                    }
+                }
+
+                // Type check each argument
+                for (i, arg) in arguments.iter().enumerate() {
+                    let arg_type = self.check_expr(arg)?;
+
+                    // Get expected parameter type (use first parameter type for variadic functions)
+                    let param_type = if i < func.parameter_types.len() {
+                        &func.parameter_types[i]
+                    } else if !func.parameter_types.is_empty() {
+                        &func.parameter_types[0]
+                    } else {
+                        continue; // No type checking for zero-parameter functions
+                    };
+
+                    // Check type compatibility (relaxed for numeric types)
+                    if !types_compatible(param_type, &arg_type) {
+                        return Err(TypeError::InvalidArgumentType {
+                            function: name.clone(),
+                            argument: i + 1,
+                            expected: param_type.clone(),
+                            got: arg_type,
+                        });
+                    }
+                }
+
+                Ok(func.return_type.clone())
             }
 
             ExprKind::Index { array, index } => {

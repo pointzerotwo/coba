@@ -8,6 +8,7 @@ pub mod stmt;
 pub mod types;
 pub mod program;
 pub mod cobol_ast;
+pub mod intrinsics;
 
 pub use expr::Expr;
 pub use stmt::Stmt;

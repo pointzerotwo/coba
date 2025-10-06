@@ -1007,6 +1007,37 @@ impl Parser {
                     line,
                     column,
                 );
+            } else if self.match_token(&TokenKind::LeftParen) {
+                // Function call - only allowed if expr is a Variable
+                let (name, line, column) = match &expr.kind {
+                    ExprKind::Variable(name) => (name.clone(), expr.line, expr.column),
+                    _ => return Err(ParseError::new(
+                        "Only identifiers can be called as functions".to_string(),
+                        expr.line,
+                        expr.column,
+                    )),
+                };
+
+                // Parse arguments
+                let mut arguments = Vec::new();
+                if !self.check(&TokenKind::RightParen) {
+                    loop {
+                        arguments.push(self.expression()?);
+                        if !self.match_token(&TokenKind::Comma) {
+                            break;
+                        }
+                    }
+                }
+                self.consume(&TokenKind::RightParen, "Expected ')' after function arguments")?;
+
+                expr = Expr::new(
+                    ExprKind::FunctionCall {
+                        name,
+                        arguments,
+                    },
+                    line,
+                    column,
+                );
             } else {
                 break;
             }
