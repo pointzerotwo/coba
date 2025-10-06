@@ -227,6 +227,8 @@ impl Parser {
             self.divide_stmt()?
         } else if self.match_token(&TokenKind::Compute) {
             self.compute_stmt()?
+        } else if self.match_token(&TokenKind::Perform) {
+            self.perform_stmt()?
         } else if self.match_token(&TokenKind::If) {
             self.if_stmt()?
         } else if self.match_token(&TokenKind::Evaluate) {
@@ -911,6 +913,36 @@ impl Parser {
         Ok(StmtKind::Compute { target, expression, on_size_error })
     }
 
+    fn perform_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let procedure = self.consume_identifier("Expected procedure name after 'perform'")?;
+
+        // Check for THRU variant
+        if self.match_token(&TokenKind::Thru) {
+            let end_procedure = self.consume_identifier("Expected ending procedure name after 'thru'")?;
+
+            // Optional TIMES clause
+            let times = if self.check(&TokenKind::Number) || self.check(&TokenKind::Identifier) {
+                let times_expr = self.expression()?;
+                self.consume(&TokenKind::Times, "Expected 'times' after count")?;
+                Some(times_expr)
+            } else {
+                None
+            };
+
+            Ok(StmtKind::PerformThru {
+                start_procedure: procedure,
+                end_procedure,
+                times,
+            })
+        } else {
+            // Check for TIMES variant
+            let times = self.expression()?;
+            self.consume(&TokenKind::Times, "Expected 'times' after count")?;
+
+            Ok(StmtKind::PerformTimes { procedure, times })
+        }
+    }
+
     /// Parse ON SIZE ERROR clause (helper)
     fn parse_on_size_error(&mut self) -> Result<Option<Vec<Stmt>>, ParseError> {
         if self.match_token(&TokenKind::On) {
@@ -939,7 +971,8 @@ impl Parser {
             self.peek().kind,
             TokenKind::Set | TokenKind::Call | TokenKind::Print | TokenKind::If |
             TokenKind::While | TokenKind::For | TokenKind::Return | TokenKind::Add |
-            TokenKind::Subtract | TokenKind::Multiply | TokenKind::Divide | TokenKind::Compute
+            TokenKind::Subtract | TokenKind::Multiply | TokenKind::Divide | TokenKind::Compute |
+            TokenKind::Perform
         )
     }
 

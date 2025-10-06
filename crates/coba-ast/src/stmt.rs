@@ -202,6 +202,19 @@ pub enum StmtKind {
         expression: Expr,
         on_size_error: Option<Vec<Stmt>>,
     },
+
+    /// Perform times: perform procedure 10 times
+    PerformTimes {
+        procedure: String,
+        times: Expr,
+    },
+
+    /// Perform through: perform proc1 thru proc2
+    PerformThru {
+        start_procedure: String,
+        end_procedure: String,
+        times: Option<Expr>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

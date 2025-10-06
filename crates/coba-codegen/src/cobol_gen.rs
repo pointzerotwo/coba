@@ -702,6 +702,26 @@ impl CobolGenerator {
                     self.write_line(&format!("{}.", compute_line));
                 }
             }
+
+            StmtKind::PerformTimes { procedure, times } => {
+                let proc_name = procedure.to_uppercase().replace('_', "-");
+                let times_str = self.generate_expr(times);
+                self.write_line(&format!("           PERFORM {} {} TIMES.", proc_name, times_str));
+            }
+
+            StmtKind::PerformThru { start_procedure, end_procedure, times } => {
+                let start_name = start_procedure.to_uppercase().replace('_', "-");
+                let end_name = end_procedure.to_uppercase().replace('_', "-");
+
+                if let Some(times_expr) = times {
+                    let times_str = self.generate_expr(times_expr);
+                    self.write_line(&format!("           PERFORM {} THRU {} {} TIMES.",
+                        start_name, end_name, times_str));
+                } else {
+                    self.write_line(&format!("           PERFORM {} THRU {}.",
+                        start_name, end_name));
+                }
+            }
         }
     }
 

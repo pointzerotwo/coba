@@ -668,6 +668,29 @@ impl SemanticAnalyzer {
                     }
                 }
             }
+
+            StmtKind::PerformTimes { procedure, times } => {
+                // Validate procedure exists (will be checked at scope level)
+                // For now, just ensure times expression is valid
+                let checker = TypeChecker::new(&self.symbol_table);
+                if let Err(e) = checker.check_expr(times) {
+                    self.errors.push(format!("Type error in perform times: {}", e));
+                }
+                // Note: procedure name validation happens at higher level
+                let _ = procedure;
+            }
+
+            StmtKind::PerformThru { start_procedure, end_procedure, times } => {
+                // Validate procedures exist (will be checked at scope level)
+                if let Some(times_expr) = times {
+                    let checker = TypeChecker::new(&self.symbol_table);
+                    if let Err(e) = checker.check_expr(times_expr) {
+                        self.errors.push(format!("Type error in perform thru: {}", e));
+                    }
+                }
+                // Note: procedure name validation happens at higher level
+                let _ = (start_procedure, end_procedure);
+            }
         }
     }
 
