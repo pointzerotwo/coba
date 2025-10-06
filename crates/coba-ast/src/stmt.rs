@@ -163,6 +163,17 @@ pub enum StmtKind {
         record: String,
     },
 
+    /// Rewrite file record: rewrite record to file
+    RewriteFile {
+        file: String,
+        record: String,
+    },
+
+    /// Delete file record: delete file
+    DeleteFile {
+        file: String,
+    },
+
     /// Add statement: add a to b giving c
     Add {
         operands: Vec<Expr>,

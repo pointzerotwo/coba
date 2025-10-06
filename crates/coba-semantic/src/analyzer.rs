@@ -585,6 +585,25 @@ impl SemanticAnalyzer {
                 }
             }
 
+            StmtKind::RewriteFile { file, record } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+
+                // Check record variable exists
+                if self.symbol_table.lookup(record).is_none() {
+                    self.errors.push(format!("Undefined record variable: {}", record));
+                }
+            }
+
+            StmtKind::DeleteFile { file } => {
+                // Check file exists
+                if self.symbol_table.lookup(file).is_none() {
+                    self.errors.push(format!("Undefined file: {}", file));
+                }
+            }
+
             StmtKind::Add { operands, to, giving, on_size_error } => {
                 let checker = TypeChecker::new(&self.symbol_table);
                 for operand in operands {

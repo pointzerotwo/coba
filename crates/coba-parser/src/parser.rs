@@ -217,6 +217,10 @@ impl Parser {
             self.read_stmt()?
         } else if self.match_token(&TokenKind::Write) {
             self.write_stmt()?
+        } else if self.match_token(&TokenKind::Rewrite) {
+            self.rewrite_stmt()?
+        } else if self.match_token(&TokenKind::Delete) {
+            self.delete_stmt()?
         } else if self.match_token(&TokenKind::Add) {
             self.add_stmt()?
         } else if self.match_token(&TokenKind::Subtract) {
@@ -794,6 +798,20 @@ impl Parser {
         let file = self.consume_identifier("Expected file name")?;
 
         Ok(StmtKind::WriteFile { file, record })
+    }
+
+    fn rewrite_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let record = self.consume_identifier("Expected record variable name")?;
+        self.consume(&TokenKind::To, "Expected 'to' after record variable")?;
+        let file = self.consume_identifier("Expected file name")?;
+
+        Ok(StmtKind::RewriteFile { file, record })
+    }
+
+    fn delete_stmt(&mut self) -> Result<StmtKind, ParseError> {
+        let file = self.consume_identifier("Expected file name")?;
+
+        Ok(StmtKind::DeleteFile { file })
     }
 
     /// Parse add statement: add a, b to c, d giving e on size error: ...

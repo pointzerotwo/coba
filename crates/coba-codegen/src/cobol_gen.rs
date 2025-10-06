@@ -552,6 +552,19 @@ impl CobolGenerator {
                 self.write_line(&format!("           WRITE {}-RECORD FROM {}.", file_name, record_name));
             }
 
+            StmtKind::RewriteFile { file, record } => {
+                let file_name = file.to_uppercase().replace('_', "-");
+                let record_name = self.symbol_table.get_mangled_name(record)
+                    .unwrap_or_else(|| record.to_uppercase().replace('_', "-"));
+
+                self.write_line(&format!("           REWRITE {}-RECORD FROM {}.", file_name, record_name));
+            }
+
+            StmtKind::DeleteFile { file } => {
+                let file_name = file.to_uppercase().replace('_', "-");
+                self.write_line(&format!("           DELETE {}.", file_name));
+            }
+
             StmtKind::Add { operands, to, giving, on_size_error } => {
                 let mut add_line = String::from("           ADD ");
 
